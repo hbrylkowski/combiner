@@ -1,4 +1,5 @@
-import glob, numpy, cv2
+import glob, cv2
+import numpy
 
 TILE_SIZE = 25
 images = {}
@@ -8,7 +9,7 @@ current_tile_float = 1
 
 
 def warm_up():
-    for img in glob.glob(str(TILE_SIZE) + "/*.jpg"):
+    for img in glob.iglob(str(TILE_SIZE) + "/**/*.jpg", recursive=True):
         imread = cv2.imread(img)
         images[img] = {'float' : imread.astype("float"), 'img': imread}
 
@@ -27,19 +28,22 @@ def mse(first_float, second):
 
 
 def find_similar(img):
-    compared_images = {}
-    floatval = img.astype("float")
-    for filename, tile_img in images.iteritems():
-        similarity = mse(floatval, tile_img)
-        compared_images[filename] = similarity
-    return min(compared_images, key=compared_images.get)
+    comparer = GetSimilar(img)
+    return min(images, key=comparer.compare)
+
+
+class GetSimilar:
+    def __init__(self, pattern):
+        self.pattern = pattern.astype("float")
+
+    def compare(self, img_to_compare):
+        return mse(self.pattern, images[img_to_compare])
 
 warm_up()
-
 base_img = cv2.imread('base_img.jpg')
 height, width, channels = base_img.shape
-cropped_height = (height / TILE_SIZE) * TILE_SIZE
-cropped_width = (width / TILE_SIZE) * TILE_SIZE
+cropped_height = round((height / TILE_SIZE)) * TILE_SIZE
+cropped_width = round((width / TILE_SIZE)) * TILE_SIZE
 
 cropped_base_image = base_img[0:cropped_height, 0:cropped_width]
 rows = []
@@ -47,9 +51,9 @@ image_from_tiles = create_blank(cropped_width, cropped_height)
 
 total_tiles = ((cropped_height / TILE_SIZE) + 1) * (cropped_width / TILE_SIZE)
 
-for x in range(1, (cropped_height / TILE_SIZE) + 1):
+for x in range(1, round(cropped_height / TILE_SIZE) + 1):
     row = []
-    for y in range(1, (cropped_width / TILE_SIZE) + 1):
+    for y in range(1, round(cropped_width / TILE_SIZE) + 1):
         cropped_part = cropped_base_image[(x - 1) * TILE_SIZE: x * TILE_SIZE, (y - 1) * TILE_SIZE: y * TILE_SIZE]
         similar_file = find_similar(cropped_part)
         similar_fragment = cv2.imread(similar_file)
