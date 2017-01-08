@@ -1,7 +1,9 @@
 import glob, cv2
 import numpy
+from multiprocessing import Process
 
 TILE_SIZE = 25
+THREADS = 8
 images = {}
 float_cache = {}
 CURRENT_TILE = 1
@@ -28,16 +30,12 @@ def mse(first_float, second):
 
 
 def find_similar(img):
-    comparer = GetSimilar(img)
-    return min(images, key=comparer.compare)
-
-
-class GetSimilar:
-    def __init__(self, pattern):
-        self.pattern = pattern.astype("float")
-
-    def compare(self, img_to_compare):
-        return mse(self.pattern, images[img_to_compare])
+    compared_images = {}
+    floatval = img.astype("float")
+    for filename, tile_img in images.items():
+        similarity = mse(floatval, tile_img)
+        compared_images[filename] = similarity
+    return min(compared_images, key=compared_images.get)
 
 warm_up()
 base_img = cv2.imread('base_img.jpg')
